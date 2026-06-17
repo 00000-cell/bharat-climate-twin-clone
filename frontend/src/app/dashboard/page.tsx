@@ -51,6 +51,7 @@ export default function DashboardPage() {
           detail="Latest monthly average"
           icon={Flame}
           tone="red"
+          delta={{ value: "+1.2°C vs avg", isPositive: false }}
         />
         <MetricCard
           title="Rainfall"
@@ -58,6 +59,7 @@ export default function DashboardPage() {
           detail="Observed district mean"
           icon={CloudRain}
           tone="cyan"
+          delta={{ value: "92% of normal", isPositive: true }}
         />
         <MetricCard
           title="Reservoir Status"
@@ -65,6 +67,7 @@ export default function DashboardPage() {
           detail="India-WRIS mock aggregate"
           icon={Droplets}
           tone="emerald"
+          delta={{ value: "-8% drawdown", isPositive: false }}
         />
         <MetricCard
           title="Air Quality"
@@ -72,11 +75,12 @@ export default function DashboardPage() {
           detail="CPCB mock average"
           icon={RadioTower}
           tone="amber"
+          delta={{ value: "+15 AQI rise", isPositive: false }}
         />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Digital Twin Snapshot</CardTitle>
             <CardDescription>Animated climate overlays with selectable district intelligence.</CardDescription>
@@ -86,31 +90,49 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Real-time Alerts</CardTitle>
             <CardDescription>District warnings for emergency operation centers.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            {alerts.map((alert) => (
-              <div key={alert.id} className="rounded-md border border-cyan-300/15 bg-white/[0.03] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <Badge tone={alert.severity}>{alert.severity}</Badge>
-                  <AlertTriangle className="h-4 w-4 text-amber-200" />
+          <CardContent className="grid gap-3 max-h-[520px] overflow-y-auto pr-1">
+            {alerts.map((alert) => {
+              const severityTone = 
+                alert.severity === "CRITICAL" ? "critical" :
+                alert.severity === "HIGH" ? "high" :
+                alert.severity === "MEDIUM" ? "moderate" : "low";
+              
+              const borderColors = {
+                CRITICAL: "border-rose-500/20 bg-rose-500/5",
+                HIGH: "border-amber-500/20 bg-amber-500/5",
+                MEDIUM: "border-cyan-500/20 bg-cyan-500/5",
+                LOW: "border-emerald-500/20 bg-emerald-400/5"
+              };
+              const cardStyle = borderColors[alert.severity as keyof typeof borderColors] || "border-cyan-300/15 bg-white/[0.03]";
+
+              return (
+                <div key={alert.id} className={`rounded-md border p-4 transition-all hover:bg-white/[0.06] ${cardStyle}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <Badge tone={severityTone}>{alert.severity}</Badge>
+                    <AlertTriangle className={`h-4 w-4 ${
+                      alert.severity === "CRITICAL" ? "text-rose-400" :
+                      alert.severity === "HIGH" ? "text-amber-400" : "text-cyan-400"
+                    }`} />
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold text-white">{alert.title}</h3>
+                  <p className="mt-1 text-xs text-cyan-200/70">
+                    {alert.district}, {alert.state}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-300">{alert.message}</p>
                 </div>
-                <h3 className="mt-3 text-sm font-semibold text-white">{alert.title}</h3>
-                <p className="mt-1 text-xs text-cyan-100">
-                  {alert.district}, {alert.state}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">{alert.message}</p>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Rainfall Trend</CardTitle>
             <CardDescription>National district average, latest 36 observations.</CardDescription>
@@ -119,7 +141,7 @@ export default function DashboardPage() {
             <TrendAreaChart data={chartData} dataKey="rainfall_mm" color="#38bdf8" unit=" mm" />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Vulnerability Leaderboard</CardTitle>
             <CardDescription>District-wise composite climate risk ranking.</CardDescription>

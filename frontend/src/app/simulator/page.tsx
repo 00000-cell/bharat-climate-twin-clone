@@ -58,7 +58,7 @@ export default function SimulatorPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Scenario Inputs</CardTitle>
             <CardDescription>Sliders model plausible policy and climate stress conditions.</CardDescription>
@@ -107,7 +107,7 @@ export default function SimulatorPage() {
           </CardContent>
         </Card>
 
-        <Card className="scanline">
+        <Card className="glass-card scanline">
           <CardHeader>
             <CardTitle>Projected Impact</CardTitle>
             <CardDescription>Scenario output updates the risk overlay contract used by the map.</CardDescription>
@@ -123,17 +123,35 @@ export default function SimulatorPage() {
                   ["Heatwave risk", result?.heatwave_risk],
                   ["Flood risk", result?.flood_risk],
                   ["Water stress risk", result?.water_stress_risk]
-                ].map(([label, value]) => (
-                  <div key={label as string} className="rounded-md border border-cyan-300/15 bg-white/[0.03] p-3">
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span className="text-slate-300">{label as string}</span>
-                      <span className="font-semibold text-white">{value ?? "--"}</span>
+                ].map(([label, value]) => {
+                  const percent = Number(value ?? 0);
+                  const colors = {
+                    low: "#34d399",
+                    moderate: "#22d3ee",
+                    high: "#fbbf24",
+                    critical: "#f87171"
+                  };
+                  const fill = percent >= 75 ? colors.critical : percent >= 50 ? colors.high : percent >= 35 ? colors.moderate : colors.low;
+                  
+                  return (
+                    <div key={label as string} className="rounded-xl border border-cyan-300/15 bg-slate-900/30 p-3.5 hover:border-cyan-300/30 transition-colors">
+                      <div className="mb-2 flex justify-between text-sm">
+                        <span className="text-slate-300 font-medium">{label as string}</span>
+                        <span className="font-mono font-bold text-white">{value ?? "--"}</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-white/10 border border-white/5">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ 
+                            width: `${percent}%`,
+                            backgroundColor: fill,
+                            boxShadow: `0 0 8px ${fill}bf`
+                          }} 
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-cyan-300" style={{ width: `${value ?? 0}%` }} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </CardContent>

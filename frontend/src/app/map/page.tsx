@@ -1,4 +1,5 @@
 import { DigitalTwinMap } from "@/components/climate/DigitalTwinMap";
+import { TimelineSlider } from "@/components/climate/TimelineSlider";
 import { Badge } from "@/components/ui/badge";
 
 export default function MapPage() {
@@ -12,6 +13,9 @@ export default function MapPage() {
         </p>
       </div>
       <DigitalTwinMap />
+      <div className="mt-2">
+        <TimelineSlider />
+      </div>
     </div>
   );
 }
