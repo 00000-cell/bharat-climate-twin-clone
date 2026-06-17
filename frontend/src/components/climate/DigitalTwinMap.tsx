@@ -7,6 +7,8 @@ import mapboxgl from "mapbox-gl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { IndiaMapModal } from "@/components/climate/IndiaMapModal";
+import type { SelectedPlace } from "@/components/climate/IndiaMapModal";
 import { api } from "@/lib/api";
 import type { District } from "@/lib/types";
 import { riskFill } from "@/lib/utils";
@@ -250,7 +252,13 @@ function RegionSelectorModal({
   );
 }
 
-export function DigitalTwinMap({ compact = false }: { compact?: boolean }) {
+export function DigitalTwinMap({
+  compact = false,
+  onPlaceSelect
+}: {
+  compact?: boolean;
+  onPlaceSelect?: (place: SelectedPlace) => void;
+}) {
   const mapNode = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -258,6 +266,7 @@ export function DigitalTwinMap({ compact = false }: { compact?: boolean }) {
   const [selected, setSelected] = useState<GeoJSON.Feature | null>(null);
   const [showSelector, setShowSelector] = useState(false);
   const [allDistricts, setAllDistricts] = useState<District[]>([]);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   useEffect(() => {
@@ -391,9 +400,26 @@ export function DigitalTwinMap({ compact = false }: { compact?: boolean }) {
             </h3>
             <p className="text-sm text-cyan-100">{selectedProps.state ?? "National view"}</p>
           </div>
-          <Button size="icon" variant="outline" aria-label="Locate" onClick={() => setShowSelector(true)}>
-            <LocateFixed className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="icon"
+              variant="outline"
+              aria-label="Search District"
+              title="Search and select district"
+              onClick={() => setShowSelector(true)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              aria-label="Filter by State"
+              title="Select state to filter dashboard"
+              onClick={() => setMapModalOpen(true)}
+            >
+              <LocateFixed className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="mt-6 grid gap-3">
           {[
@@ -434,6 +460,16 @@ export function DigitalTwinMap({ compact = false }: { compact?: boolean }) {
           onClose={() => setShowSelector(false)}
         />
       )}
+
+      {/* India Map Popup — opens when Locate button is clicked */}
+      <IndiaMapModal
+        open={mapModalOpen}
+        onClose={() => setMapModalOpen(false)}
+        onSelect={(place) => {
+          setMapModalOpen(false);
+          onPlaceSelect?.(place);
+        }}
+      />
     </div>
   );
 }

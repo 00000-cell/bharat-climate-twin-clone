@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   Activity,
   BarChart3,
@@ -12,9 +13,11 @@ import {
   Layers3,
   LockKeyhole,
   Map,
+  Menu,
   Orbit,
   Settings,
-  SlidersHorizontal
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -29,17 +32,19 @@ const nav = [
   { href: "/history", label: "Explorer", icon: Layers3 },
   { href: "/copilot", label: "AI Copilot", icon: Bot },
   { href: "/admin", label: "Admin", icon: Settings },
-  { href: "/login", label: "Sign In", icon: LockKeyhole }
+  { href: "/login", label: "Sign In", icon: LockKeyhole },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (isLanding) return <>{children}</>;
 
   return (
     <div className="min-h-screen bg-radar-grid bg-[size:44px_44px]">
+      {/* Desktop sidebar */}
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 border-r border-cyan-300/15 bg-slate-950/82 px-4 py-5 backdrop-blur-2xl lg:block">
         <Link href="/" className="flex items-center gap-3 px-2">
           <span className="grid h-11 w-11 place-items-center rounded-md border border-cyan-300/30 bg-cyan-400/10">
@@ -77,12 +82,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
+      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-cyan-300/15 bg-slate-950/84 px-4 py-3 backdrop-blur-2xl lg:ml-72">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 lg:hidden">
-            <Orbit className="h-6 w-6 text-cyan-200" />
-            <span className="font-semibold">Bharat Climate Twin</span>
-          </Link>
+          <div className="flex items-center gap-3 lg:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/20 bg-white/5 text-cyan-100"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <Link href="/" className="flex items-center gap-2">
+              <Orbit className="h-5 w-5 text-cyan-200" />
+              <span className="font-semibold text-white">Bharat Climate Twin</span>
+            </Link>
+          </div>
           <div className="hidden text-sm text-muted-foreground lg:block">
             National Climate Digital Twin Command Layer
           </div>
@@ -98,25 +113,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </div>
-        <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
-          {nav.slice(1, 8).map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "inline-flex min-w-max items-center gap-2 rounded-md border border-cyan-300/15 px-3 py-2 text-xs text-slate-300",
-                  pathname === item.href && "bg-cyan-400/12 text-white"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
       </header>
+
+      {/* Mobile slide-out menu */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside className="relative z-10 h-full w-72 border-r border-cyan-300/15 bg-slate-950 px-4 py-5 shadow-2xl animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
+                <span className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/30 bg-cyan-400/10">
+                  <Orbit className="h-5 w-5 text-cyan-200" />
+                </span>
+                <span className="font-semibold text-white">Bharat Climate Twin</span>
+              </Link>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="grid h-8 w-8 place-items-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <nav className="mt-6 grid gap-1">
+              {nav.map((item) => {
+                const Icon = item.icon;
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-slate-300 transition",
+                      active && "bg-cyan-400/12 text-white shadow-glow",
+                      !active && "hover:bg-white/6 hover:text-white"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
 
       <main className="px-4 py-5 lg:ml-72 lg:px-8">{children}</main>
     </div>
