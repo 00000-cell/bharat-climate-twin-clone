@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +9,7 @@ import {
   ArrowRight,
   BarChart3,
   Bot,
+  ChevronRight,
   CloudRain,
   DatabaseZap,
   Droplets,
@@ -17,6 +19,7 @@ import {
   Map,
   Satellite,
   ShieldAlert,
+  ShieldCheck,
   Thermometer,
   Zap,
 } from "lucide-react";
@@ -25,10 +28,10 @@ import { Button } from "@/components/ui/button";
 
 /* ── Data ── */
 const capabilities = [
-  { title: "Satellite + Weather Fusion", icon: Satellite, detail: "INSAT, Bhuvan, IMD, India-WRIS, and CPCB multi-source data fusion.", color: "#22d3ee" },
-  { title: "District Risk Engine", icon: Gauge, detail: "Flood, drought, heatwave, and water-stress composite risk scoring.", color: "#34d399" },
-  { title: "Scenario Simulator", icon: Activity, detail: "What-if analysis for rainfall, temperature, and reservoir changes.", color: "#fbbf24" },
-  { title: "AI Climate Copilot", icon: DatabaseZap, detail: "Natural language queries with chart responses and interventions.", color: "#a78bfa" },
+  { title: "Satellite + Weather Fusion", icon: Satellite, detail: "Multi-source ingestion from INSAT, NRSC, Bhuvan, and IMD for high-resolution ground truth.", color: "#22d3ee" },
+  { title: "District Risk Engine", icon: Gauge, detail: "Dynamic vulnerability scoring from 0-100 for flood, drought, heatwave, and water-stress.", color: "#34d399" },
+  { title: "Scenario Simulator", icon: Activity, detail: "Stress-test climate variables to predict multi-sector outcomes and infrastructure resilience.", color: "#fbbf24" },
+  { title: "AI Climate Copilot", icon: DatabaseZap, detail: "Conversational intelligence for operational command, generating instant reports and maps.", color: "#a78bfa" },
 ];
 
 const stats = [
@@ -146,9 +149,9 @@ export default function LandingPage() {
           style={{ opacity: Math.max(0, 1 - scrollY / 600), transform: `translateY(${scrollY * 0.15}px)` }}
         >
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 backdrop-blur-xl">
-              <Globe className="h-4 w-4 animate-spin" style={{ animationDuration: "8s" }} />
-              AI-Powered National Climate Intelligence
+            <div className="inline-flex items-center gap-2 rounded-md border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-sm font-medium text-cyan-200 backdrop-blur-sm">
+              <ShieldAlert className="h-4 w-4" />
+              Government-tech climate command layer
             </div>
             <h1 className="mt-8 max-w-4xl text-5xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl">
               Bharat
@@ -157,9 +160,9 @@ export default function LandingPage() {
                 Climate Twin
               </span>
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
-              A high-fidelity digital replica of India&apos;s climate system — fusing satellite, ground station,
-              and AI data for real-time monitoring, prediction, and scenario simulation.
+            <p className="mt-8 max-w-2xl text-xl leading-relaxed text-slate-300">
+              An AI-powered digital twin of India&apos;s climate system for prediction, simulation,
+              and visualization of flood, drought, heat, water, air, and crop risks.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Button asChild size="default" className="group gap-2 px-6 py-3 text-base">
@@ -283,36 +286,24 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {[
-              { title: "Flood Risk", detail: "Brahmaputra, coastal, and urban drainage exposure. Real-time river level monitoring and AI-based inundation forecasting.", icon: Droplets, color: "#38bdf8" },
-              { title: "Drought Watch", detail: "Rainfall deficit tracking, vegetation health (NDVI), soil moisture, and reservoir drawdown analysis.", icon: Thermometer, color: "#fbbf24" },
-              { title: "Heatwave & AQI", detail: "Temperature anomaly detection, heat stress mapping, and air quality monitoring across 200+ CPCB stations.", icon: CloudRain, color: "#f87171" },
+              { title: "Flood Risk", detail: "Brahmaputra, coastal, and urban drainage exposure monitoring and early warning.", icon: Droplets },
+              { title: "Drought Watch", detail: "Rainfall deficit, vegetation health, and reservoir drawdown analytics for food security.", icon: BarChart3 },
+              { title: "Action Layer", detail: "District rankings, localized alerts, and role-based access for response operations.", icon: ShieldCheck },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.title}
-                  className={`rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.04] to-transparent p-6 transition-all duration-700 hover:border-white/10 ${
+                  className={`flex flex-col gap-4 rounded-2xl border border-cyan-400/10 bg-slate-950/30 p-8 transition-all duration-700 hover:border-cyan-400/25 ${
                     isVisible("risks") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                   }`}
                   style={{ transitionDelay: `${200 + i * 150}ms` }}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-5 w-5" style={{ color: item.color }} />
-                    <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-400">{item.detail}</p>
-                  <div className="mt-4 h-1 rounded-full bg-white/5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-1000"
-                      style={{
-                        width: isVisible("risks") ? "100%" : "0%",
-                        background: item.color,
-                        transitionDelay: `${500 + i * 200}ms`,
-                      }}
-                    />
-                  </div>
+                  <Icon className="h-8 w-8 text-emerald-300" />
+                  <h4 className="text-xl font-bold text-white">{item.title}</h4>
+                  <p className="text-sm text-slate-400">{item.detail}</p>
                 </div>
               );
             })}
@@ -328,32 +319,78 @@ export default function LandingPage() {
       >
         <div className="mx-auto max-w-6xl">
           <div className={`transition-all duration-700 ${isVisible("datasources") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-            <p className="text-sm font-semibold uppercase tracking-widest text-amber-400">National Data Integration</p>
-            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
-              Indigenous data sources
+            <div className="inline-flex items-center gap-2 rounded-md border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-sm font-medium text-cyan-400">
+              <Satellite className="h-4 w-4" />
+              National Climate Datasets
+            </div>
+            <h2 className="mt-6 text-4xl font-bold text-white lg:text-5xl">
+              Powered by India&apos;s Climate Data Infrastructure
             </h2>
-            <p className="mt-3 max-w-2xl text-slate-400">
-              Built on India&apos;s own satellite, meteorological, and environmental monitoring infrastructure.
+            <p className="mt-6 max-w-2xl text-lg text-slate-400">
+              Bharat Climate Twin integrates meteorological observations, satellite products, and national
+              climate datasets to power AI-driven forecasting and risk assessment.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {dataSources.map((src, i) => (
-              <div
-                key={src.name}
-                className={`flex items-start gap-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-5 py-4 transition-all duration-500 ${
-                  isVisible("datasources") ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"
-                }`}
-                style={{ transitionDelay: `${i * 80}ms` }}
-              >
-                <Satellite className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-                <div>
-                  <p className="text-sm font-semibold text-white">{src.name}</p>
-                  <p className="mt-0.5 text-xs text-slate-400">{src.type}</p>
-                  <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-cyan-400/70">{src.org}</p>
+          {/* 3-card data sources */}
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: CloudRain, title: "IMD Gridded Rainfall", desc: "High-resolution rainfall observations used for climate analysis and drought monitoring.", badge: "0.25° × 0.25°" },
+              { icon: Thermometer, title: "IMD Maximum Temperature", desc: "Daily maximum temperature dataset supporting heatwave and climate trend analysis.", badge: "1° × 1°" },
+              { icon: Satellite, title: "INSAT Land Surface Temp", desc: "Surface temperature observations derived from INSAT Earth observation missions.", badge: "Satellite Product" },
+            ].map((src, i) => {
+              const Icon = src.icon;
+              return (
+                <div
+                  key={src.title}
+                  className={`glass-panel rounded-xl p-6 transition-all duration-700 ${isVisible("datasources") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+                  style={{ transitionDelay: `${200 + i * 100}ms` }}
+                >
+                  <div className="mb-6 flex items-start justify-between">
+                    <div className="grid h-12 w-12 place-items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 text-cyan-400">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span className="rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-400">
+                      {src.badge}
+                    </span>
+                  </div>
+                  <h4 className="font-semibold text-white">{src.title}</h4>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-400">{src.desc}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+
+          {/* Pipeline Flow */}
+          <div
+            className={`mt-12 glass-panel rounded-2xl bg-slate-950/20 p-8 transition-all duration-700 ${isVisible("datasources") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+            style={{ transitionDelay: "500ms" }}
+          >
+            <h3 className="mb-8 text-xl font-semibold text-white">Climate Data Fusion Pipeline</h3>
+            <div className="flex flex-wrap items-center gap-4">
+              {[
+                { label: "IMD Rainfall", accent: false },
+                { label: "IMD Temperature", accent: false },
+                { label: "INSAT Products", accent: false },
+                { label: "AI Forecast Engine", accent: false },
+                { label: "Climate Twin", accent: true },
+              ].map((step, i, arr) => (
+                <React.Fragment key={step.label}>
+                  <div
+                    className={`rounded-lg border px-4 py-2 text-sm ${
+                      step.accent
+                        ? "border-emerald-400/30 bg-emerald-400/10 font-semibold text-emerald-300"
+                        : "border-cyan-400/20 bg-cyan-400/5 text-cyan-200"
+                    }`}
+                  >
+                    {step.label}
+                  </div>
+                  {i < arr.length - 1 && (
+                    <ChevronRight className="h-4 w-4 text-slate-600" />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       </section>

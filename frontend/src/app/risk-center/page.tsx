@@ -96,35 +96,52 @@ export default function RiskCenterPage() {
       <Card>
         <CardHeader>
           <CardTitle>Climate Vulnerability Leaderboard</CardTitle>
-          <CardDescription>Highest composite district scores first.</CardDescription>
+          <CardDescription>Highest composite district scores across national monitored zones.</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-sm">
-            <thead className="text-left text-slate-400">
-              <tr className="border-b border-cyan-300/15">
-                <th className="py-3">District</th>
-                <th>State</th>
-                <th>Composite</th>
-                <th>Flood</th>
-                <th>Drought</th>
-                <th>Heatwave</th>
-                <th>Trend</th>
+          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-slate-500">
+                <th className="pb-4 font-semibold">District</th>
+                <th className="pb-4 font-semibold">State</th>
+                <th className="pb-4 font-semibold">Composite</th>
+                <th className="pb-4 font-semibold">Flood</th>
+                <th className="pb-4 font-semibold">Drought</th>
+                <th className="pb-4 font-semibold">Heatwave</th>
+                <th className="pb-4 font-semibold">Trend</th>
               </tr>
             </thead>
             <tbody>
-              {rankings.map((row) => (
-                <tr key={row.district_id} className="border-b border-cyan-300/10">
-                  <td className="py-3 font-medium text-white">{row.district_name}</td>
-                  <td>{row.state_name}</td>
-                  <td className={riskColor(row.composite_risk)}>{row.composite_risk}</td>
-                  <td>{row.flood_risk}</td>
-                  <td>{row.drought_risk}</td>
-                  <td>{row.heatwave_risk}</td>
-                  <td>
-                    <Badge>{row.trend}</Badge>
-                  </td>
-                </tr>
-              ))}
+              {rankings.map((row) => {
+                const trendColor =
+                  row.trend === "Increasing"
+                    ? "bg-rose-400/10 text-rose-400 border-rose-400/20"
+                    : row.trend === "Decreasing"
+                    ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
+                    : "bg-slate-400/10 text-slate-400 border-white/10";
+                return (
+                  <tr
+                    key={row.district_id}
+                    className="border-b border-white/5 transition-colors hover:bg-white/5"
+                  >
+                    <td className="py-5 font-bold text-white">{row.district_name}</td>
+                    <td className="text-slate-400">{row.state_name}</td>
+                    <td className={`font-bold ${riskColor(row.composite_risk)}`}>
+                      {row.composite_risk}
+                    </td>
+                    <td className={riskColor(row.flood_risk)}>{row.flood_risk}</td>
+                    <td className={riskColor(row.drought_risk)}>{row.drought_risk}</td>
+                    <td className={riskColor(row.heatwave_risk)}>{row.heatwave_risk}</td>
+                    <td>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${trendColor}`}
+                      >
+                        {row.trend}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardContent>
