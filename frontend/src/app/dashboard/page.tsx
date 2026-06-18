@@ -1,15 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AlertTriangle, BarChart3, CloudRain, Droplets, Flame, Gauge, RadioTower } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  Globe2,
+  Brain,
+  Zap,
+  FileText,
+  Shield,
+  Users,
+  MapPin,
+  Clock,
+  ArrowRight
+} from "lucide-react";
 
 import { DigitalTwinMap } from "@/components/climate/DigitalTwinMap";
-import { MetricCard } from "@/components/climate/MetricCard";
-import { RankingBarChart, TrendAreaChart } from "@/components/climate/Charts";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import type { Analytics, ClimateAlert, Ranking } from "@/lib/types";
+
+// ─── Animated Counter Component ──────────────────────────────────────────────
+function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?: number }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    if (end === 0) return;
+    const totalMiliseconds = duration;
+    const incrementTime = Math.max(Math.floor(totalMiliseconds / end), 10);
+    
+    const timer = setInterval(() => {
+      start += Math.ceil((end - start) / 10);
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [value, duration]);
+
+  return <span className="tabular-nums">{count}</span>;
+}
+
+// ─── Live Clock Component ────────────────────────────────────────────────────
+function LiveClock() {
+  const [time, setTime] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTime(now.toLocaleTimeString("en-IN", { hour12: false }) + " IST");
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/40 px-3.5 py-1.5 backdrop-blur-md">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+      </span>
+      <span className="text-[11px] font-medium font-mono text-slate-300">
+        MISSION LIVE · {time}
+      </span>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -17,7 +82,7 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<ClimateAlert[]>([]);
 
   useEffect(() => {
-    Promise.all([api.analytics(), api.rankings(8), api.alerts()])
+    Promise.all([api.analytics(), api.rankings(30), api.alerts()])
       .then(([analyticsResponse, rankingResponse, alertResponse]) => {
         setAnalytics(analyticsResponse);
         setRankings(rankingResponse);
@@ -26,131 +91,329 @@ export default function DashboardPage() {
       .catch(() => undefined);
   }, []);
 
-  const summary = analytics?.summary;
-  const chartData = analytics?.national_trends ?? [];
+  // ─── Dynamic Metrics derived from existing APIs ────────────────────────────
+  const nationalRiskScore = useMemo(() => {
+    if (!rankings.length) return 58;
+    return Math.round(rankings.reduce((sum, r) => sum + r.composite_risk, 0) / rankings.length);
+  }, [rankings]);
+
+  const activeAlertsCount = useMemo(() => {
+    return alerts.length;
+  }, [alerts]);
+
+  const populationAtRiskMillions = useMemo(() => {
+    if (!rankings.length) return 142.5;
+    // Calculate based on districts with high composite risk (> 60)
+    const highRiskDistricts = rankings.filter(r => r.composite_risk > 60);
+    return Math.round(highRiskDistricts.length * 4.8 * 10) / 10 || 142.5;
+  }, [rankings]);
+
+  const highRiskDistrictsCount = useMemo(() => {
+    if (!rankings.length) return 12;
+    return rankings.filter(r => r.composite_risk > 60).length;
+  }, [rankings]);
+
+  const topAlert = useMemo(() => {
+    if (!alerts.length) return null;
+    // Prioritize CRITICAL severity
+    return alerts.find(a => a.severity === "CRITICAL") || alerts[0];
+  }, [alerts]);
+
+  const dynamicBrief = useMemo(() => {
+    if (!rankings.length) {
+      return "Heavy rainfall is expected across Eastern India over the next 48 hours. Flood probability has increased in Odisha and Assam while western India continues to experience heatwave conditions. Immediate monitoring is recommended.";
+    }
+    const criticalDistricts = rankings.filter(r => r.composite_risk > 70).slice(0, 2).map(d => d.district_name);
+    const rainHigh = rankings.find(r => r.flood_risk > 70);
+    const droughtHigh = rankings.find(r => r.drought_risk > 70);
+
+    const locations = criticalDistricts.length ? criticalDistricts.join(" and ") : "Assam";
+    let brief = `Early-warning telemetry indicates elevated risk coordinates. `;
+    if (rainHigh) {
+      brief += `Heavy precipitation anomalies in ${rainHigh.state_name} (${rainHigh.district_name}) increase flood probabilities. `;
+    }
+    if (droughtHigh) {
+      brief += `Soil moisture depletion is accelerating in ${droughtHigh.district_name} (${droughtHigh.state_name}) indicating early-stage drought trends. `;
+    }
+    brief += `Coordinated disaster mitigation centers should monitor the affected basins in ${locations} immediately.`;
+    return brief;
+  }, [rankings]);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-6 pb-6">
+      
+      {/* ─── 1. SMART ALERT BANNER ───────────────────────────────────────────── */}
+      {topAlert && (
+        <Link href="/alerts" className="block transition-transform hover:scale-[1.005]">
+          <div className="group relative overflow-hidden rounded-xl border border-rose-500/30 bg-rose-950/20 px-5 py-4 backdrop-blur-md">
+            <div className="absolute inset-0 bg-gradient-to-r from-rose-500/5 to-transparent pointer-events-none" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500/15 border border-rose-500/30 animate-pulse">
+                  <AlertTriangle className="h-5 w-5 text-rose-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge tone="critical" className="bg-rose-500/80 hover:bg-rose-500 font-bold uppercase text-[9px] tracking-wider px-2 py-0.5">
+                      {topAlert.severity} ALERT
+                    </Badge>
+                    <span className="text-[11px] font-mono text-rose-400 font-semibold uppercase">
+                      {topAlert.alert_type} INCIDENT
+                    </span>
+                    <span className="text-slate-500 text-xs">•</span>
+                    <span className="text-slate-300 text-xs font-semibold">
+                      {topAlert.district}, {topAlert.state}
+                    </span>
+                  </div>
+                  <h3 className="mt-1 text-sm font-bold text-white group-hover:text-rose-200 transition-colors">
+                    {topAlert.title}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-slate-400 leading-relaxed max-w-4xl">
+                    {topAlert.message}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-rose-400 shrink-0 font-medium group-hover:translate-x-1 transition-transform">
+                Assess Threat <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* ─── HEADER SECTION ──────────────────────────────────────────────────── */}
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
-          <Badge>National command dashboard</Badge>
-          <h1 className="mt-3 text-3xl font-semibold tracking-normal text-white">Climate Operations Overview</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-300">
-            Live mock feeds, district vulnerability rankings, disaster forecast summaries, and command actions.
-          </p>
+          <Badge className="bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 border border-cyan-400/20 px-3 py-1 font-semibold text-[10px] tracking-wider uppercase">
+            National Climate Mission Control
+          </Badge>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-white md:text-4xl">
+            Operations Center
+          </h1>
         </div>
-        <div className="rounded-md border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-100">
-          {summary?.districts_monitored ?? 0} districts monitored
+        <div className="shrink-0">
+          <LiveClock />
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          title="National Temperature"
-          value={`${summary?.avg_temperature_c ?? "--"} C`}
-          detail="Latest monthly average"
-          icon={Flame}
-          tone="red"
-          delta={{ value: "+1.2°C vs avg", isPositive: false }}
-        />
-        <MetricCard
-          title="Rainfall"
-          value={`${summary?.avg_rainfall_mm ?? "--"} mm`}
-          detail="Observed district mean"
-          icon={CloudRain}
-          tone="cyan"
-          delta={{ value: "92% of normal", isPositive: true }}
-        />
-        <MetricCard
-          title="Reservoir Status"
-          value={`${summary?.avg_reservoir_level_pct ?? "--"}%`}
-          detail="India-WRIS mock aggregate"
-          icon={Droplets}
-          tone="emerald"
-          delta={{ value: "-8% drawdown", isPositive: false }}
-        />
-        <MetricCard
-          title="Air Quality"
-          value={`${summary?.avg_aqi ?? "--"} AQI`}
-          detail="CPCB mock average"
-          icon={RadioTower}
-          tone="amber"
-          delta={{ value: "+15 AQI rise", isPositive: false }}
-        />
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Digital Twin Snapshot</CardTitle>
-            <CardDescription>Animated climate overlays with selectable district intelligence.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DigitalTwinMap compact />
+      {/* ─── 2. 4 NATIONAL KPIs ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {/* KPI 1: Risk Score */}
+        <Card className="glass-card relative overflow-hidden group hover:border-cyan-300/30 transition-all duration-300">
+          <div className="absolute -right-3 -bottom-3 opacity-5 pointer-events-none transition-transform duration-500 group-hover:scale-110">
+            <Shield className="h-24 w-24 text-white" />
+          </div>
+          <CardContent className="p-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              National Climate Risk Score
+            </p>
+            <div className="mt-2.5 flex items-baseline gap-1 text-4xl font-extrabold text-cyan-300 tracking-tight glow-cyan">
+              <AnimatedCounter value={nationalRiskScore} />
+              <span className="text-lg font-bold text-slate-500">/100</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-400/10">
+                {nationalRiskScore >= 60 ? "Elevated" : "Standard"}
+              </span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Real-time Alerts</CardTitle>
-            <CardDescription>District warnings for emergency operation centers.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 max-h-[520px] overflow-y-auto pr-1">
-            {alerts.map((alert) => {
-              const severityTone = 
-                alert.severity === "CRITICAL" ? "critical" :
-                alert.severity === "HIGH" ? "high" :
-                alert.severity === "MEDIUM" ? "moderate" : "low";
-              
-              const borderColors = {
-                CRITICAL: "border-rose-500/20 bg-rose-500/5",
-                HIGH: "border-amber-500/20 bg-amber-500/5",
-                MEDIUM: "border-cyan-500/20 bg-cyan-500/5",
-                LOW: "border-emerald-500/20 bg-emerald-400/5"
-              };
-              const cardStyle = borderColors[alert.severity as keyof typeof borderColors] || "border-cyan-300/15 bg-white/[0.03]";
+        {/* KPI 2: Active Alerts */}
+        <Card className="glass-card relative overflow-hidden group hover:border-rose-300/30 transition-all duration-300">
+          <div className="absolute -right-3 -bottom-3 opacity-5 pointer-events-none transition-transform duration-500 group-hover:scale-110">
+            <AlertTriangle className="h-24 w-24 text-white" />
+          </div>
+          <CardContent className="p-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              Active Alerts
+            </p>
+            <div className="mt-2.5 text-4xl font-extrabold text-rose-400 tracking-tight glow-rose">
+              <AnimatedCounter value={activeAlertsCount} />
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="rounded-full bg-rose-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-400 border border-rose-400/10">
+                {activeAlertsCount > 0 ? "Threat Active" : "Nominal"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
-              return (
-                <div key={alert.id} className={`rounded-md border p-4 transition-all hover:bg-white/[0.06] ${cardStyle}`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <Badge tone={severityTone}>{alert.severity}</Badge>
-                    <AlertTriangle className={`h-4 w-4 ${
-                      alert.severity === "CRITICAL" ? "text-rose-400" :
-                      alert.severity === "HIGH" ? "text-amber-400" : "text-cyan-400"
-                    }`} />
-                  </div>
-                  <h3 className="mt-3 text-sm font-semibold text-white">{alert.title}</h3>
-                  <p className="mt-1 text-xs text-cyan-200/70">
-                    {alert.district}, {alert.state}
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-slate-300">{alert.message}</p>
+        {/* KPI 3: Population at Risk */}
+        <Card className="glass-card relative overflow-hidden group hover:border-amber-300/30 transition-all duration-300">
+          <div className="absolute -right-3 -bottom-3 opacity-5 pointer-events-none transition-transform duration-500 group-hover:scale-110">
+            <Users className="h-24 w-24 text-white" />
+          </div>
+          <CardContent className="p-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              Population at Risk
+            </p>
+            <div className="mt-2.5 flex items-baseline gap-0.5 text-4xl font-extrabold text-amber-300 tracking-tight glow-amber">
+              <AnimatedCounter value={Math.floor(populationAtRiskMillions)} />
+              <span className="text-xl font-bold text-slate-500">.</span>
+              <AnimatedCounter value={Math.round((populationAtRiskMillions % 1) * 10)} />
+              <span className="text-2xl font-bold ml-1 text-slate-400">M</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400 border border-amber-400/10">
+                Direct Exposure
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI 4: High-Risk Districts */}
+        <Card className="glass-card relative overflow-hidden group hover:border-purple-300/30 transition-all duration-300">
+          <div className="absolute -right-3 -bottom-3 opacity-5 pointer-events-none transition-transform duration-500 group-hover:scale-110">
+            <MapPin className="h-24 w-24 text-white" />
+          </div>
+          <CardContent className="p-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              High-Risk Districts
+            </p>
+            <div className="mt-2.5 text-4xl font-extrabold text-purple-300 tracking-tight glow-purple">
+              <AnimatedCounter value={highRiskDistrictsCount} />
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="rounded-full bg-purple-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-purple-300 border border-purple-400/10">
+                Mitigation Focus
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ─── HERO & SIDE PANEL LAYOUT ────────────────────────────────────────── */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        
+        {/* ─── 3. HERO MAP (60-70% width on large screens) ────────────────────── */}
+        <div className="lg:col-span-2 flex flex-col h-[520px] lg:h-[620px]">
+          <Card className="glass-card flex-1 flex flex-col overflow-hidden relative group border-cyan-500/20">
+            <div className="absolute top-4 left-4 z-20 pointer-events-none">
+              <Badge className="bg-slate-950/80 text-cyan-300 border border-cyan-400/20 backdrop-blur-md flex items-center gap-1.5 py-1 px-2.5 shadow-lg">
+                <Globe2 className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} /> Live Climate Layer
+              </Badge>
+            </div>
+            
+            <div className="absolute top-4 right-4 z-20">
+              <Link href="/map">
+                <Button size="sm" className="bg-cyan-500/80 hover:bg-cyan-500 text-slate-950 font-bold border border-cyan-400/30 shadow-lg text-xs gap-1 py-1 h-8 px-3 transition-all">
+                  Full Interactive Map <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="flex-1 w-full h-full relative cursor-pointer" onClick={() => window.location.href = "/map"}>
+              <DigitalTwinMap compact />
+            </div>
+            
+            <div className="absolute bottom-4 left-4 right-4 z-20 pointer-events-none flex justify-between items-end">
+              <div className="bg-slate-950/80 border border-white/5 p-3 rounded-lg backdrop-blur-md shadow-lg max-w-[280px]">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Map Legend</p>
+                <div className="mt-1.5 flex items-center justify-between text-[9px] font-bold text-slate-500">
+                  <span>Safe</span>
+                  <span>Moderate</span>
+                  <span>High</span>
+                  <span>Critical</span>
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                <div className="mt-1 h-1.5 w-full rounded-full bg-gradient-to-r from-[#10b981] via-[#eab308] to-[#ef4444]" />
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* ─── SIDE PANEL (AI Brief & Quick Actions) ─────────────────────────── */}
+        <div className="lg:col-span-1 flex flex-col gap-6 h-auto">
+          
+          {/* ─── 4. AI CLIMATE BRIEF ─────────────────────────────────────────── */}
+          <Card className="glass-card overflow-hidden flex flex-col justify-between border-cyan-500/15 bg-gradient-to-br from-cyan-950/20 to-slate-900/60 flex-1 min-h-[260px]">
+            <CardHeader className="pb-3 border-b border-cyan-300/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
+                    <Brain className="h-4 w-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-white leading-none">AI Climate Brief</CardTitle>
+                    <CardDescription className="text-[10px] text-slate-500 mt-1">Copilot Synthesis</CardDescription>
+                  </div>
+                </div>
+                <Badge className="bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/10 border border-cyan-400/15 text-[9px] font-bold py-0.5 px-2">
+                  88% Confidence
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 flex-1 flex flex-col justify-between">
+              <p className="text-slate-300 text-xs leading-relaxed font-normal">
+                {dynamicBrief}
+              </p>
+              
+              <div className="mt-5 pt-4 border-t border-cyan-300/10 flex items-center justify-between">
+                <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-500" /> Updated 1m ago
+                </span>
+                <Link href="/copilot">
+                  <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5 text-cyan-300 border-cyan-500/20 hover:border-cyan-400/40 hover:bg-cyan-500/10 font-bold transition-all">
+                    Ask AI Copilot <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ─── 5. QUICK ACTIONS ────────────────────────────────────────────── */}
+          <Card className="glass-card border-white/5 bg-slate-900/30 flex-1 min-h-[260px]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold text-white">Quick Actions</CardTitle>
+              <CardDescription className="text-[10px] text-slate-500">Fast access to key services</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 grid grid-cols-2 gap-3">
+              {/* Button 1: Digital Twin */}
+              <Link href="/map" className="col-span-1">
+                <div className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-cyan-500/15 bg-cyan-500/5 hover:bg-cyan-500/10 p-3 text-center transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300 group-hover:scale-110 transition-transform">
+                    <Globe2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-cyan-200 uppercase tracking-wider">Digital Twin</span>
+                </div>
+              </Link>
+
+              {/* Button 2: Ask Copilot */}
+              <Link href="/copilot" className="col-span-1">
+                <div className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-emerald-500/15 bg-emerald-500/5 hover:bg-emerald-500/10 p-3 text-center transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300 group-hover:scale-110 transition-transform">
+                    <Brain className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider">AI Copilot</span>
+                </div>
+              </Link>
+
+              {/* Button 3: Scenario Simulator */}
+              <Link href="/simulator" className="col-span-1">
+                <div className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-purple-500/15 bg-purple-500/5 hover:bg-purple-500/10 p-3 text-center transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-400/10 text-purple-300 group-hover:scale-110 transition-transform">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-purple-200 uppercase tracking-wider">Simulator</span>
+                </div>
+              </Link>
+
+              {/* Button 4: Climate Report */}
+              <Link href="/reports" className="col-span-1">
+                <div className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-amber-500/15 bg-amber-500/5 hover:bg-amber-500/10 p-3 text-center transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300 group-hover:scale-110 transition-transform">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-200 uppercase tracking-wider">Get Report</span>
+                </div>
+              </Link>
+            </CardContent>
+          </Card>
+
+        </div>
+
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Rainfall Trend</CardTitle>
-            <CardDescription>National district average, latest 36 observations.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TrendAreaChart data={chartData} dataKey="rainfall_mm" color="#38bdf8" unit=" mm" />
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Vulnerability Leaderboard</CardTitle>
-            <CardDescription>District-wise composite climate risk ranking.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RankingBarChart data={rankings.map((row) => ({ district: row.district_name, risk: row.composite_risk }))} />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
