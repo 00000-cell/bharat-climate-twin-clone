@@ -27,6 +27,18 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
+    import logging
+    logger = logging.getLogger(__name__)
+    from app.services.gemini import gemini_service
+    try:
+        gemini_service.initialize()
+        if not gemini_service.validate_key():
+            logger.error("[STARTUP ERROR] GEMINI_API_KEY validation failed during startup! Live API requests may fail.")
+        else:
+            logger.info("[STARTUP] GEMINI_API_KEY validated successfully.")
+    except Exception as e:
+        logger.error(f"[STARTUP ERROR] Gemini service initialization failed: {e}")
+
     if settings.seed_database:
         with engine.begin() as connection:
             connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
