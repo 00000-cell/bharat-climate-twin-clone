@@ -47,6 +47,10 @@ export type ClimateObservation = {
   aqi: number;
   ndvi?: number;
   reservoir_level_pct?: number;
+  data_source?: string;
+  last_updated?: string;
+  dataset_version?: string;
+  confidence?: string;
 };
 
 export type Analytics = {
@@ -139,4 +143,12 @@ export type SimulationResult = {
   economic_loss_m_inr?: number;
   infrastructure_risk?: number;
   environmental_impact_score?: number;
+  ai_analysis?: {
+    headline: string;
+    confidence: number;
+    drivers: string[];
+    vulnerableZones: string[];
+    recommendations: string[];
+    alertLevel: string;
+  };
 };

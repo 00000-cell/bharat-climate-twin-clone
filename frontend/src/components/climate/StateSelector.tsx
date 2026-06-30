@@ -2,18 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { District } from "@/lib/types";
+import type { State } from "@/lib/types";
 
-export function DistrictSelector({
+export function StateSelector({
   value,
-  onChange,
-  stateId
+  onChange
 }: {
-  value?: number;
-  onChange: (districtId: number | undefined) => void;
-  stateId?: number | "";
+  value: number | "";
+  onChange: (stateId: number | "") => void;
 }) {
-  const [districts, setDistricts] = useState<District[]>([]);
+  const [states, setStates] = useState<State[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -21,10 +19,10 @@ export function DistrictSelector({
     let cancelled = false;
     setLoading(true);
     setError(false);
-    api.districts(stateId || undefined)
+    api.states()
       .then((items) => {
         if (!cancelled) {
-          setDistricts(items);
+          setStates(items);
           setLoading(false);
         }
       })
@@ -35,28 +33,28 @@ export function DistrictSelector({
         }
       });
     return () => { cancelled = true; };
-  }, [stateId]);
+  }, []);
 
   return (
     <select
-      value={value ?? ""}
+      value={value}
       disabled={loading}
       onChange={(event) => {
         const val = event.target.value;
-        onChange(val === "" ? undefined : Number(val));
+        onChange(val === "" ? "" : Number(val));
       }}
       className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50 disabled:cursor-wait"
     >
       {loading ? (
-        <option value="">Loading districts...</option>
+        <option value="">Loading states...</option>
       ) : error ? (
-        <option value="">Error loading districts — retry</option>
+        <option value="">Error loading states — retry</option>
       ) : (
         <>
-          <option value="">National / All Districts</option>
-          {districts.map((district) => (
-            <option key={district.id} value={district.id}>
-              {district.name}{!stateId ? `, ${district.state_name}` : ""}
+          <option value="">National / All States</option>
+          {states.map((state) => (
+            <option key={state.id} value={state.id}>
+              {state.name}
             </option>
           ))}
         </>

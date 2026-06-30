@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -9,6 +11,7 @@ from app.models.user import User
 from app.schemas.climate import CopilotRequest, CopilotResponse
 from app.services.copilot import ClimateCopilot
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/copilot", tags=["copilot"])
 copilot_service = ClimateCopilot()
 
@@ -19,11 +22,38 @@ def chat(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ) -> CopilotResponse:
-    ranked = rankings(limit=15, db=db)
-    response = copilot_service.answer(payload, ranked, db)
-    db.add(ChatHistory(user_id=user.id if user else None, prompt=payload.prompt, response=response))
-    db.commit()
-    return CopilotResponse(**response)
+    try:
+        try:
+            ranked = rankings(year=payload.active_year, limit=15, db=db)
+        except Exception as e:
+            logger.error(f"[COPILOT API] Failed to fetch rankings: {e}")
+            ranked = []
+        
+        response = copilot_service.answer(payload, ranked, db)
+        
+        try:
+            db.add(ChatHistory(user_id=user.id if user else None, prompt=payload.prompt, response=response))
+            db.commit()
+        except Exception as e:
+            logger.error(f"[COPILOT API] Failed to save chat history: {e}")
+            db.rollback()
+            
+        return CopilotResponse(**response)
+    except Exception as err:
+        logger.error(f"[COPILOT API] Unhandled exception in chat endpoint: {err}")
+        # Build immediate safe fallback payload
+        fallback_res = {
+            "explanation": "### AI Service Temporarily Unavailable\n\nThe AI Copilot is temporarily unavailable due to a network connection timeout or API rate limit. Please try again in a few moments.",
+            "risk_analysis": "AI Service Temporarily Unavailable",
+            "recommended_actions": ["Verify network connectivity.", "Retry the query in a few moments."],
+            "chart": {"type": "bar", "data": []},
+            "districts": [],
+            "action": None,
+            "suggestions": ["Retry request"],
+            "explainable_risk": None,
+            "insights": ["Gemini API request failed."]
+        }
+        return CopilotResponse(**fallback_res)
 
 
 @router.get("/history")
